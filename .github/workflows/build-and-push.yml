@@ -151,11 +151,18 @@ jobs:
 
     - name: Update Kubernetes manifests
       run: |
+        # Get the latest image tags
+        FRONTEND_TAG=$(echo "${{ steps.meta-frontend.outputs.tags }}" | head -n1)
+        BACKEND_TAG=$(echo "${{ steps.meta-backend.outputs.tags }}" | head -n1)
+        
         # Update frontend deployment
-        sed -i "s|image: ghcr.io/niranec77/documentation-improver-frontend:.*|image: ${{ steps.meta-frontend.outputs.tags }}|" k8s/frontend-deployment.yaml
+        sed -i "s|image: ghcr.io/niranec77/documentation-improver-documentation-improver-frontend:.*|image: $FRONTEND_TAG|" k8s/frontend-deployment.yaml
         
         # Update backend deployment
-        sed -i "s|image: ghcr.io/niranec77/documentation-improver-backend:.*|image: ${{ steps.meta-backend.outputs.tags }}|" k8s/backend-deployment.yaml
+        sed -i "s|image: ghcr.io/niranec77/documentation-improver-documentation-improver-backend:.*|image: $BACKEND_TAG|" k8s/backend-deployment.yaml
+        
+        echo "Updated frontend image to: $FRONTEND_TAG"
+        echo "Updated backend image to: $BACKEND_TAG"
 
     - name: Commit and push changes
       run: |

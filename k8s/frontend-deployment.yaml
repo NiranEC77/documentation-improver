@@ -1,7 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: doc-improver
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: documentation-improver-frontend
+  namespace: doc-improver
   labels:
     app: documentation-improver-frontend
 spec:
@@ -55,6 +61,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: documentation-improver-frontend-service
+  namespace: doc-improver
   labels:
     app: documentation-improver-frontend
 spec:
