@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+      - REACT_APP_WS_URL=ws://localhost:5000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - doc-improver
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - LLM_SERVICE_URL=http://llm:11434
+      - MODEL_NAME=codellama:7b
+      - MAX_TOKENS=4096
+      - SECRET_KEY=your-secret-key-here
+    depends_on:
+      - llm
+    volumes:
+      - ./backend:/app
+      - uploads:/app/uploads
+    networks:
+      - doc-improver
+
+  llm:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    volumes:
+      - ollama-data:/root/.ollama
+      - models:/models
+    networks:
+      - doc-improver
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  uploads:
+  ollama-data:
+  models:
+
+networks:
+  doc-improver:
+    driver: bridge 

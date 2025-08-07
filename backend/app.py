@@ -1,0 +1,289 @@
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+from flask_socketio import SocketIO, emit
+import os
+import uuid
+import json
+import requests
+from werkzeug.utils import secure_filename
+import threading
+import time
+from datetime import datetime
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Enable CORS
+CORS(app, origins=["http://localhost:3000", "http://frontend:3000"])
+
+# SocketIO for real-time updates
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Ensure upload directory exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Configuration
+LLM_SERVICE_URL = os.environ.get('LLM_SERVICE_URL', 'http://llm-service:11434')
+MODEL_NAME = os.environ.get('MODEL_NAME', 'codellama:7b')
+MAX_TOKENS = int(os.environ.get('MAX_TOKENS', '4096'))
+
+# In-memory storage for document processing status
+document_status = {}
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    ALLOWED_EXTENSIONS = {'txt', 'md', 'rst', 'docx', 'pdf'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def extract_text_from_file(file_path):
+    """Extract text from various file formats"""
+    file_extension = file_path.rsplit('.', 1)[1].lower()
+    
+    if file_extension == 'txt':
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    elif file_extension == 'md':
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    elif file_extension == 'rst':
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    else:
+        # For other formats, return placeholder
+        return f"Document content from {file_extension} file"
+
+def create_gcp_style_prompt(original_text):
+    """Create a prompt to transform text into GCP-style documentation"""
+    return f"""Transform the following documentation into Google Cloud Platform (GCP) style documentation. 
+
+GCP Documentation Style Guidelines:
+1. Use clear, concise language
+2. Structure with proper headings and subheadings
+3. Include code examples with syntax highlighting
+4. Add step-by-step instructions where appropriate
+5. Use consistent formatting and spacing
+6. Include relevant links and references
+7. Make it scannable with bullet points and numbered lists
+8. Use professional, technical tone
+9. Include prerequisites and requirements sections
+10. Add troubleshooting sections when relevant
+
+Original Documentation:
+{original_text}
+
+Please transform this into clean, professional GCP-style documentation:"""
+
+def improve_document_with_llm(text, document_id):
+    """Improve document using LLM service"""
+    try:
+        # Create the prompt
+        prompt = create_gcp_style_prompt(text)
+        
+        # Prepare the request for Ollama
+        payload = {
+            "model": MODEL_NAME,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": 0.1,
+                "top_p": 0.9,
+                "num_predict": MAX_TOKENS
+            }
+        }
+        
+        # Update status
+        document_status[document_id]['status'] = 'processing'
+        document_status[document_id]['progress'] = 10
+        socketio.emit('document_update', {
+            'document_id': document_id,
+            'status': 'processing',
+            'progress': 10
+        })
+        
+        # Call LLM service
+        response = requests.post(
+            f"{LLM_SERVICE_URL}/api/generate",
+            json=payload,
+            timeout=300  # 5 minutes timeout
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            improved_text = result.get('response', '')
+            
+            # Update status
+            document_status[document_id]['status'] = 'completed'
+            document_status[document_id]['progress'] = 100
+            document_status[document_id]['improved_text'] = improved_text
+            document_status[document_id]['completed_at'] = datetime.now().isoformat()
+            
+            socketio.emit('document_update', {
+                'document_id': document_id,
+                'status': 'completed',
+                'progress': 100,
+                'improved_text': improved_text
+            })
+            
+            return improved_text
+        else:
+            raise Exception(f"LLM service error: {response.status_code}")
+            
+    except Exception as e:
+        document_status[document_id]['status'] = 'error'
+        document_status[document_id]['error'] = str(e)
+        socketio.emit('document_update', {
+            'document_id': document_id,
+            'status': 'error',
+            'error': str(e)
+        })
+        raise e
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'llm_service_url': LLM_SERVICE_URL,
+        'model_name': MODEL_NAME
+    })
+
+@app.route('/api/documents/upload', methods=['POST'])
+def upload_document():
+    """Upload a document for processing"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'File type not allowed'}), 400
+        
+        # Generate unique document ID
+        document_id = str(uuid.uuid4())
+        
+        # Save file
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{document_id}_{filename}")
+        file.save(file_path)
+        
+        # Extract text from file
+        original_text = extract_text_from_file(file_path)
+        
+        # Initialize document status
+        document_status[document_id] = {
+            'id': document_id,
+            'filename': filename,
+            'original_text': original_text,
+            'status': 'uploaded',
+            'progress': 0,
+            'created_at': datetime.now().isoformat(),
+            'improved_text': None,
+            'error': None
+        }
+        
+        # Start processing in background
+        def process_document():
+            try:
+                improve_document_with_llm(original_text, document_id)
+            except Exception as e:
+                print(f"Error processing document {document_id}: {e}")
+        
+        thread = threading.Thread(target=process_document)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'document_id': document_id,
+            'filename': filename,
+            'status': 'uploaded',
+            'message': 'Document uploaded and processing started'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/documents/<document_id>', methods=['GET'])
+def get_document_status(document_id):
+    """Get document processing status"""
+    if document_id not in document_status:
+        return jsonify({'error': 'Document not found'}), 404
+    
+    return jsonify(document_status[document_id])
+
+@app.route('/api/documents/<document_id>/result', methods=['GET'])
+def get_document_result(document_id):
+    """Get improved document result"""
+    if document_id not in document_status:
+        return jsonify({'error': 'Document not found'}), 404
+    
+    doc = document_status[document_id]
+    if doc['status'] != 'completed':
+        return jsonify({'error': 'Document processing not completed'}), 400
+    
+    return jsonify({
+        'document_id': document_id,
+        'original_text': doc['original_text'],
+        'improved_text': doc['improved_text'],
+        'filename': doc['filename'],
+        'completed_at': doc['completed_at']
+    })
+
+@app.route('/api/models', methods=['GET'])
+def list_models():
+    """List available LLM models"""
+    try:
+        response = requests.get(f"{LLM_SERVICE_URL}/api/tags")
+        if response.status_code == 200:
+            models = response.json()
+            return jsonify({
+                'models': models.get('models', []),
+                'current_model': MODEL_NAME
+            })
+        else:
+            return jsonify({'error': 'Failed to fetch models'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/models/load', methods=['POST'])
+def load_model():
+    """Load a specific model"""
+    try:
+        data = request.get_json()
+        model_name = data.get('model_name', MODEL_NAME)
+        
+        payload = {
+            "name": model_name
+        }
+        
+        response = requests.post(f"{LLM_SERVICE_URL}/api/pull", json=payload)
+        
+        if response.status_code == 200:
+            return jsonify({
+                'message': f'Model {model_name} loaded successfully',
+                'model_name': model_name
+            })
+        else:
+            return jsonify({'error': 'Failed to load model'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@socketio.on('connect')
+def handle_connect():
+    """Handle WebSocket connection"""
+    print('Client connected')
+    emit('connected', {'message': 'Connected to document improvement service'})
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle WebSocket disconnection"""
+    print('Client disconnected')
+
+if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True) 

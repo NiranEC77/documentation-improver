@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: documentation-improver-backend
+  labels:
+    app: documentation-improver-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: documentation-improver-backend
+  template:
+    metadata:
+      labels:
+        app: documentation-improver-backend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: backend
+        image: ghcr.io/niranec77/documentation-improver-backend:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: LLM_SERVICE_URL
+          value: "http://documentation-improver-llm:11434"
+        - name: MODEL_NAME
+          value: "codellama:7b"
+        - name: MAX_TOKENS
+          value: "4096"
+        - name: SECRET_KEY
+          value: "your-secret-key-here"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: uploads
+          mountPath: /app/uploads
+      volumes:
+      - name: uploads
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: documentation-improver-backend-service
+  labels:
+    app: documentation-improver-backend
+spec:
+  selector:
+    app: documentation-improver-backend
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+  type: ClusterIP 
