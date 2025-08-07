@@ -60,20 +60,28 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Install yamllint
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y yamllint
+
     - name: Lint YAML files
       run: |
-        # Check if yamllint is available
-        if command -v yamllint &> /dev/null; then
-          yamllint .github/workflows/ k8s/
-        else
-          echo "yamllint not available, skipping YAML linting"
-        fi
+        # Create yamllint config
+        echo "extends: default
+        rules:
+          line-length: disable
+          document-start: disable
+          truthy: disable" > .yamllint.yml
+        
+        # Run yamllint
+        yamllint -c .yamllint.yml .github/workflows/ k8s/
+
+    - name: Install kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
 
     - name: Validate Kubernetes manifests
-      run: |
-        # Check if kubectl is available
-        if command -v kubectl &> /dev/null; then
-          kubectl apply --dry-run=client -f k8s/
-        else
-          echo "kubectl not available, skipping K8s validation"
-        fi 
+      run: kubectl apply --dry-run=client -f k8s/ 
