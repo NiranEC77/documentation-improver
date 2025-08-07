@@ -2,86 +2,86 @@ name: Test Application
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test-backend:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
 
-    - name: Install dependencies
-      run: |
-        cd backend
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
 
-    - name: Run backend tests
-      run: |
-        cd backend
-        python -c "import app; print('Backend imports successfully')"
+      - name: Run backend tests
+        run: |
+          cd backend
+          python -c "import app; print('Backend imports successfully')"
 
   test-frontend:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: frontend/package.json
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
 
-    - name: Install dependencies
-      run: |
-        cd frontend
-        npm ci || npm install
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci || npm install
 
-    - name: Run frontend tests
-      run: |
-        cd frontend
-        npm test -- --watchAll=false --passWithNoTests || echo "Tests completed"
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          npm test -- --watchAll=false --passWithNoTests || echo "Tests completed"
 
   lint-yaml:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install yamllint
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y yamllint
+      - name: Install yamllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yamllint
 
-    - name: Lint YAML files
-      run: |
-        # Create yamllint config
-        echo "extends: default
-        rules:
-          line-length: disable
-          document-start: disable
-          truthy: disable" > .yamllint.yml
-        
-        # Run yamllint
-        yamllint -c .yamllint.yml .github/workflows/ k8s/
+      - name: Lint YAML files
+        run: |
+          # Create yamllint config
+          echo "extends: default
+          rules:
+            line-length: disable
+            document-start: disable
+            truthy: disable" > .yamllint.yml
 
-    - name: Install kubectl
-      run: |
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-        chmod +x kubectl
-        sudo mv kubectl /usr/local/bin/
+          # Run yamllint
+          yamllint -c .yamllint.yml .github/workflows/ k8s/
 
-    - name: Validate Kubernetes manifests
-      run: kubectl apply --dry-run=client -f k8s/ 
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      - name: Validate Kubernetes manifests
+        run: kubectl apply --dry-run=client -f k8s/

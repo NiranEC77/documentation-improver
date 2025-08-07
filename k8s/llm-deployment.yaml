@@ -28,46 +28,46 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-      - name: llm
-        image: ollama/ollama:latest
-        ports:
-        - containerPort: 11434
-        env:
-        - name: OLLAMA_HOST
-          value: "0.0.0.0"
-        - name: OLLAMA_ORIGINS
-          value: "*"
-        resources:
-          requests:
-            memory: "4Gi"
-            cpu: "2"
-          limits:
-            memory: "8Gi"
-            cpu: "4"
-        livenessProbe:
-          httpGet:
-            path: /api/tags
-            port: 11434
-          initialDelaySeconds: 60
-          periodSeconds: 30
-        readinessProbe:
-          httpGet:
-            path: /api/tags
-            port: 11434
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        volumeMounts:
-        - name: ollama-data
-          mountPath: /root/.ollama
-        - name: models
-          mountPath: /models
+        - name: llm
+          image: ollama/ollama:latest
+          ports:
+            - containerPort: 11434
+          env:
+            - name: OLLAMA_HOST
+              value: "0.0.0.0"
+            - name: OLLAMA_ORIGINS
+              value: "*"
+          resources:
+            requests:
+              memory: "4Gi"
+              cpu: "2"
+            limits:
+              memory: "8Gi"
+              cpu: "4"
+          livenessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+            - name: models
+              mountPath: /models
       volumes:
-      - name: ollama-data
-        persistentVolumeClaim:
-          claimName: ollama-pvc
-      - name: models
-        persistentVolumeClaim:
-          claimName: models-pvc
+        - name: ollama-data
+          persistentVolumeClaim:
+            claimName: ollama-pvc
+        - name: models
+          persistentVolumeClaim:
+            claimName: models-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -80,9 +80,9 @@ spec:
   selector:
     app: documentation-improver-llm
   ports:
-  - protocol: TCP
-    port: 11434
-    targetPort: 11434
+    - protocol: TCP
+      port: 11434
+      targetPort: 11434
   type: ClusterIP
 ---
 apiVersion: v1
@@ -107,4 +107,4 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 20Gi 
+      storage: 20Gi

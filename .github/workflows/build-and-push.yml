@@ -2,10 +2,10 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches: [ main, develop ]
-    tags: [ 'v*' ]
+    branches: [main, develop]
+    tags: ['v*']
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
@@ -32,48 +32,46 @@ jobs:
             image-name: documentation-improver-backend
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.image-name }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.image-name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Build and push Docker image
-      id: build
-      uses: docker/build-push-action@v5
-      with:
-        context: ${{ matrix.context }}
-        file: ${{ matrix.dockerfile }}
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/amd64
-        build-args: |
-          BUILDKIT_INLINE_CACHE=1
-
-
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
   # Optional: Build and push LLM service image (if you want to customize Ollama)
   build-llm:
@@ -84,42 +82,42 @@ jobs:
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata for LLM
-      id: meta-llm
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-llm
-        tags: |
-          type=ref,event=branch
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
+      - name: Extract metadata for LLM
+        id: meta-llm
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-llm
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Build and push LLM image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./llm-service/Dockerfile
-        push: true
-        tags: ${{ steps.meta-llm.outputs.tags }}
-        labels: ${{ steps.meta-llm.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/amd64,linux/arm64
+      - name: Build and push LLM image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./llm-service/Dockerfile
+          push: true
+          tags: ${{ steps.meta-llm.outputs.tags }}
+          labels: ${{ steps.meta-llm.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
 
   # Update Kubernetes manifests with new image tags
   update-k8s-manifests:
@@ -130,44 +128,44 @@ jobs:
       contents: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Extract metadata for frontend
-      id: meta-frontend
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-documentation-improver-frontend
-        tags: |
-          type=sha,prefix={{branch}}-
+      - name: Extract metadata for frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-documentation-improver-frontend
+          tags: |
+            type=sha,prefix={{branch}}-
 
-    - name: Extract metadata for backend
-      id: meta-backend
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-documentation-improver-backend
-        tags: |
-          type=sha,prefix={{branch}}-
+      - name: Extract metadata for backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-documentation-improver-backend
+          tags: |
+            type=sha,prefix={{branch}}-
 
-    - name: Update Kubernetes manifests
-      run: |
-        # Get the latest image tags
-        FRONTEND_TAG=$(echo "${{ steps.meta-frontend.outputs.tags }}" | head -n1)
-        BACKEND_TAG=$(echo "${{ steps.meta-backend.outputs.tags }}" | head -n1)
-        
-        # Update frontend deployment
-        sed -i "s|image: ghcr.io/niranec77/documentation-improver-documentation-improver-frontend:.*|image: $FRONTEND_TAG|" k8s/frontend-deployment.yaml
-        
-        # Update backend deployment
-        sed -i "s|image: ghcr.io/niranec77/documentation-improver-documentation-improver-backend:.*|image: $BACKEND_TAG|" k8s/backend-deployment.yaml
-        
-        echo "Updated frontend image to: $FRONTEND_TAG"
-        echo "Updated backend image to: $BACKEND_TAG"
+      - name: Update Kubernetes manifests
+        run: |
+          # Get the latest image tags
+          FRONTEND_TAG=$(echo "${{ steps.meta-frontend.outputs.tags }}" | head -n1)
+          BACKEND_TAG=$(echo "${{ steps.meta-backend.outputs.tags }}" | head -n1)
 
-    - name: Commit and push changes
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add k8s/
-        git diff --quiet && git diff --staged --quiet || git commit -m "Update image tags in Kubernetes manifests"
-        git push 
+          # Update frontend deployment
+          sed -i "s|image: ghcr.io/niranec77/documentation-improver-documentation-improver-frontend:.*|image: $FRONTEND_TAG|" k8s/frontend-deployment.yaml
+
+          # Update backend deployment
+          sed -i "s|image: ghcr.io/niranec77/documentation-improver-documentation-improver-backend:.*|image: $BACKEND_TAG|" k8s/backend-deployment.yaml
+
+          echo "Updated frontend image to: $FRONTEND_TAG"
+          echo "Updated backend image to: $BACKEND_TAG"
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add k8s/
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update image tags in Kubernetes manifests"
+          git push
