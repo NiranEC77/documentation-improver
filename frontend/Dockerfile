@@ -5,8 +5,8 @@ WORKDIR /app
 # Copy package files
 COPY package.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies with timeout and cache
+RUN npm install --timeout=300000 --no-audit --no-fund
 
 # Copy application code
 COPY . .
