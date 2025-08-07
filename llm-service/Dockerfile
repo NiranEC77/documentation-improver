@@ -4,11 +4,7 @@ FROM ollama/ollama:latest
 ENV OLLAMA_HOST=0.0.0.0
 ENV OLLAMA_ORIGINS=*
 
-# Create non-root user
-RUN useradd -m -u 1000 ollama && \
-    chown -R ollama:ollama /root/.ollama
 
-USER ollama
 
 # Expose port
 EXPOSE 11434
