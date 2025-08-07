@@ -11,10 +11,11 @@ RUN npm install
 # Copy application code
 COPY . .
 
-# Create non-root user
+# Create non-root user and set ownership
 RUN addgroup -g 1000 appuser && \
     adduser -D -s /bin/sh -u 1000 -G appuser appuser && \
     chown -R appuser:appuser /app
+
 USER appuser
 
 # Expose port
