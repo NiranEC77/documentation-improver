@@ -343,17 +343,26 @@ def get_document_result(document_id):
 def list_models():
     """List available LLM models"""
     try:
-        response = requests.get(f"{LLM_SERVICE_URL}/api/tags")
+        print(f"[MODELS] Fetching models from: {LLM_SERVICE_URL}/api/tags")
+        response = requests.get(f"{LLM_SERVICE_URL}/api/tags", timeout=10)
+        print(f"[MODELS] Response status: {response.status_code}")
+        
         if response.status_code == 200:
             models = response.json()
+            print(f"[MODELS] Response data: {models}")
+            model_list = models.get('models', [])
+            print(f"[MODELS] Found {len(model_list)} models: {[m.get('name', 'unknown') for m in model_list]}")
+            
             return jsonify({
-                'models': models.get('models', []),
+                'models': model_list,
                 'current_model': MODEL_NAME
             })
         else:
-            return jsonify({'error': 'Failed to fetch models'}), 500
+            print(f"[MODELS] Error response: {response.text}")
+            return jsonify({'error': f'Failed to fetch models: {response.status_code}'}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"[MODELS] Exception: {str(e)}")
+        return jsonify({'error': f'Failed to connect to LLM service: {str(e)}'}), 500
 
 @app.route('/api/models/load', methods=['POST'])
 def load_model():
@@ -362,22 +371,72 @@ def load_model():
         data = request.get_json()
         model_name = data.get('model_name', MODEL_NAME)
         
+        print(f"[MODEL LOAD] Loading model: {model_name}")
+        
         payload = {
             "name": model_name
         }
         
-        response = requests.post(f"{LLM_SERVICE_URL}/api/pull", json=payload)
+        print(f"[MODEL LOAD] Sending request to: {LLM_SERVICE_URL}/api/pull")
+        response = requests.post(f"{LLM_SERVICE_URL}/api/pull", json=payload, timeout=300)
+        
+        print(f"[MODEL LOAD] Response status: {response.status_code}")
         
         if response.status_code == 200:
+            print(f"[MODEL LOAD] Model {model_name} loaded successfully")
             return jsonify({
                 'message': f'Model {model_name} loaded successfully',
                 'model_name': model_name
             })
         else:
-            return jsonify({'error': 'Failed to load model'}), 500
+            print(f"[MODEL LOAD] Error response: {response.text}")
+            return jsonify({'error': f'Failed to load model: {response.status_code}'}), 500
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"[MODEL LOAD] Exception: {str(e)}")
+        return jsonify({'error': f'Failed to load model: {str(e)}'}), 500
+
+@app.route('/api/models/auto-load', methods=['POST'])
+def auto_load_model():
+    """Automatically load the default model if no models are available"""
+    try:
+        print(f"[AUTO LOAD] Checking for available models...")
+        
+        # First check what models are available
+        response = requests.get(f"{LLM_SERVICE_URL}/api/tags", timeout=10)
+        if response.status_code == 200:
+            models = response.json()
+            model_list = models.get('models', [])
+            
+            if model_list:
+                print(f"[AUTO LOAD] Found {len(model_list)} models, no need to load")
+                return jsonify({
+                    'message': f'Found {len(model_list)} models already available',
+                    'models': model_list
+                })
+        
+        # No models found, load the default model
+        print(f"[AUTO LOAD] No models found, loading default model: {MODEL_NAME}")
+        
+        payload = {
+            "name": MODEL_NAME
+        }
+        
+        response = requests.post(f"{LLM_SERVICE_URL}/api/pull", json=payload, timeout=300)
+        
+        if response.status_code == 200:
+            print(f"[AUTO LOAD] Default model loaded successfully")
+            return jsonify({
+                'message': f'Default model {MODEL_NAME} loaded successfully',
+                'model_name': MODEL_NAME
+            })
+        else:
+            print(f"[AUTO LOAD] Error loading model: {response.text}")
+            return jsonify({'error': f'Failed to load default model: {response.status_code}'}), 500
+            
+    except Exception as e:
+        print(f"[AUTO LOAD] Exception: {str(e)}")
+        return jsonify({'error': f'Failed to auto-load model: {str(e)}'}), 500
 
 @socketio.on('connect')
 def handle_connect():

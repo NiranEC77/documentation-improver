@@ -41,6 +41,31 @@ const ModelManager = ({ models, currentModel, onModelChange, onModelsRefresh }) 
     }
   };
 
+  const autoLoadModel = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/models/auto-load', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(result.message);
+        await onModelsRefresh(); // Refresh the models list
+      } else {
+        const error = await response.json();
+        alert(`Failed to auto-load model: ${error.error}`);
+      }
+    } catch (error) {
+      alert(`Error auto-loading model: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="content">
       <div className="content-header">
@@ -58,6 +83,14 @@ const ModelManager = ({ models, currentModel, onModelChange, onModelsRefresh }) 
         >
           <RefreshCw size={16} className={loading ? 'loading' : ''} />
           Refresh Models
+        </button>
+        <button
+          className="btn btn-primary"
+          onClick={autoLoadModel}
+          disabled={loading}
+        >
+          <Download size={16} />
+          Auto-Load Default Model
         </button>
       </div>
 
