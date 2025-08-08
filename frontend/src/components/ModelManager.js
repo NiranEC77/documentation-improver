@@ -41,6 +41,31 @@ const ModelManager = ({ models, currentModel, onModelChange, onModelsRefresh }) 
     }
   };
 
+  const testConnection = async () => {
+    setLoading(true);
+    try {
+      console.log('[FRONTEND] Testing LLM connection...');
+      const response = await fetch('/api/models/test-connection', {
+        method: 'GET',
+      });
+
+      console.log('[FRONTEND] Test response status:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ ${result.message}`);
+      } else {
+        const error = await response.json();
+        alert(`❌ ${error.message}`);
+      }
+    } catch (error) {
+      console.error('[FRONTEND] Test connection error:', error);
+      alert(`❌ Error testing connection: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const autoLoadModel = async () => {
     setLoading(true);
     try {
@@ -110,6 +135,14 @@ const ModelManager = ({ models, currentModel, onModelChange, onModelsRefresh }) 
         >
           <RefreshCw size={16} className={loading ? 'loading' : ''} />
           Refresh Models
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={testConnection}
+          disabled={loading}
+        >
+          <CheckCircle size={16} />
+          Test LLM Connection
         </button>
         <button
           className="btn btn-primary"

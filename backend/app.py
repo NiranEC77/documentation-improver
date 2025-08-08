@@ -433,7 +433,8 @@ def auto_load_model():
             "name": MODEL_NAME
         }
         
-        response = requests.post(f"{LLM_SERVICE_URL}/api/pull", json=payload, timeout=300)
+        print(f"[AUTO LOAD] Sending pull request to LLM service...")
+        response = requests.post(f"{LLM_SERVICE_URL}/api/pull", json=payload, timeout=60)  # Reduced timeout to 60 seconds
         
         if response.status_code == 200:
             print(f"[AUTO LOAD] Default model loaded successfully")
@@ -448,6 +449,43 @@ def auto_load_model():
     except Exception as e:
         print(f"[AUTO LOAD] Exception: {str(e)}")
         return jsonify({'error': f'Failed to auto-load model: {str(e)}'}), 500
+
+@app.route('/api/models/test-connection', methods=['GET'])
+def test_llm_connection():
+    """Test if LLM service is reachable"""
+    try:
+        print(f"[TEST CONNECTION] Testing connection to: {LLM_SERVICE_URL}")
+        
+        # Test basic connectivity
+        response = requests.get(f"{LLM_SERVICE_URL}/api/tags", timeout=10)
+        print(f"[TEST CONNECTION] Response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            models = response.json()
+            model_count = len(models.get('models', []))
+            print(f"[TEST CONNECTION] Found {model_count} models")
+            
+            return jsonify({
+                'status': 'connected',
+                'message': f'LLM service is reachable. Found {model_count} models.',
+                'model_count': model_count,
+                'llm_service_url': LLM_SERVICE_URL
+            })
+        else:
+            print(f"[TEST CONNECTION] Error response: {response.text}")
+            return jsonify({
+                'status': 'error',
+                'message': f'LLM service responded with status {response.status_code}',
+                'llm_service_url': LLM_SERVICE_URL
+            }), 500
+            
+    except Exception as e:
+        print(f"[TEST CONNECTION] Exception: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to connect to LLM service: {str(e)}',
+            'llm_service_url': LLM_SERVICE_URL
+        }), 500
 
 @socketio.on('connect')
 def handle_connect():
