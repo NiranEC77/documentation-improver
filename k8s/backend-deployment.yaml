@@ -39,7 +39,7 @@ spec:
             - containerPort: 5000
           env:
             - name: LLM_SERVICE_URL
-              value: "http://documentation-improver-llm:11434"
+              value: "http://documentation-improver-llm-service:11434"
             - name: MODEL_NAME
               value: "codellama:7b"
             - name: MAX_TOKENS

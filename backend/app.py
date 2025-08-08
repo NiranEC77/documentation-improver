@@ -25,7 +25,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Configuration
-LLM_SERVICE_URL = os.environ.get('LLM_SERVICE_URL', 'http://llm-service:11434')
+LLM_SERVICE_URL = os.environ.get('LLM_SERVICE_URL', 'http://documentation-improver-llm-service:11434')
 MODEL_NAME = os.environ.get('MODEL_NAME', 'codellama:7b')
 MAX_TOKENS = int(os.environ.get('MAX_TOKENS', '4096'))
 
