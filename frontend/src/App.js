@@ -26,7 +26,7 @@ function App() {
     });
 
     newSocket.on('document_update', (data) => {
-      console.log('Document update:', data);
+      console.log('[FRONTEND] Document update received:', data);
       updateDocumentStatus(data);
     });
 
@@ -50,16 +50,19 @@ function App() {
   };
 
   const updateDocumentStatus = (updateData) => {
+    console.log('[FRONTEND] Updating document status:', updateData);
     setDocuments(prevDocs => {
       const updatedDocs = prevDocs.map(doc => {
         if (doc.id === updateData.document_id) {
-          return {
+          const updatedDoc = {
             ...doc,
             status: updateData.status,
             progress: updateData.progress || doc.progress,
             improved_text: updateData.improved_text || doc.improved_text,
             error: updateData.error || doc.error
           };
+          console.log('[FRONTEND] Updated document:', updatedDoc);
+          return updatedDoc;
         }
         return doc;
       });

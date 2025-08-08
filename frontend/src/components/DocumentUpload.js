@@ -92,6 +92,7 @@ const DocumentUpload = ({ onDocumentUploaded, socket, currentModel }) => {
           source_url: data.source_url,
         };
 
+        console.log('[FRONTEND] Document uploaded:', document);
         onDocumentUploaded(document);
         setUploadStatus({ 
           type: 'success', 
