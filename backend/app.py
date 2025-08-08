@@ -54,6 +54,32 @@ def extract_text_from_file(file_path):
         # For other formats, return placeholder
         return f"Document content from {file_extension} file"
 
+def extract_text_from_url(url):
+    """Extract text content from a URL"""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        # Try to extract text content (basic implementation)
+        # For better results, you might want to use libraries like beautifulsoup4
+        content = response.text
+        
+        # Basic HTML tag removal (simple approach)
+        import re
+        # Remove HTML tags
+        content = re.sub(r'<[^>]+>', '', content)
+        # Remove extra whitespace
+        content = re.sub(r'\s+', ' ', content)
+        # Remove special characters
+        content = re.sub(r'[^\w\s\-.,!?;:()]', '', content)
+        
+        return content.strip()
+    except Exception as e:
+        raise Exception(f"Failed to extract content from URL: {str(e)}")
+
 def create_gcp_style_prompt(original_text):
     """Create a prompt to transform text into GCP-style documentation"""
     return f"""Transform the following documentation into Google Cloud Platform (GCP) style documentation. 
@@ -203,6 +229,66 @@ def upload_document():
             'filename': filename,
             'status': 'uploaded',
             'message': 'Document uploaded and processing started'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/documents/ingest-url', methods=['POST'])
+def ingest_url():
+    """Ingest document from URL"""
+    try:
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return jsonify({'error': 'URL not provided'}), 400
+        
+        url = data['url'].strip()
+        if not url:
+            return jsonify({'error': 'URL cannot be empty'}), 400
+        
+        # Validate URL format
+        if not url.startswith(('http://', 'https://')):
+            return jsonify({'error': 'Invalid URL format. Must start with http:// or https://'}), 400
+        
+        # Generate unique document ID
+        document_id = str(uuid.uuid4())
+        
+        # Extract text from URL
+        try:
+            original_text = extract_text_from_url(url)
+        except Exception as e:
+            return jsonify({'error': f'Failed to extract content from URL: {str(e)}'}), 400
+        
+        # Initialize document status
+        document_status[document_id] = {
+            'id': document_id,
+            'filename': f"url_document_{document_id[:8]}.txt",
+            'original_text': original_text,
+            'status': 'uploaded',
+            'progress': 0,
+            'created_at': datetime.now().isoformat(),
+            'improved_text': None,
+            'error': None,
+            'source_url': url
+        }
+        
+        # Start processing in background
+        def process_document():
+            try:
+                improve_document_with_llm(original_text, document_id)
+            except Exception as e:
+                print(f"Error processing document {document_id}: {e}")
+        
+        thread = threading.Thread(target=process_document)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'document_id': document_id,
+            'filename': f"url_document_{document_id[:8]}.txt",
+            'status': 'uploaded',
+            'message': 'URL content ingested and processing started',
+            'source_url': url
         })
         
     except Exception as e:
