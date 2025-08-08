@@ -44,6 +44,7 @@ const ModelManager = ({ models, currentModel, onModelChange, onModelsRefresh }) 
   const autoLoadModel = async () => {
     setLoading(true);
     try {
+      console.log('[FRONTEND] Auto-loading model...');
       const response = await fetch('/api/models/auto-load', {
         method: 'POST',
         headers: {
@@ -51,15 +52,41 @@ const ModelManager = ({ models, currentModel, onModelChange, onModelsRefresh }) 
         },
       });
 
+      console.log('[FRONTEND] Response status:', response.status);
+      console.log('[FRONTEND] Response headers:', response.headers);
+
       if (response.ok) {
-        const result = await response.json();
+        const responseText = await response.text();
+        console.log('[FRONTEND] Response text:', responseText);
+        
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('[FRONTEND] JSON parse error:', parseError);
+          alert(`Invalid response from server: ${responseText}`);
+          return;
+        }
+        
         alert(result.message);
         await onModelsRefresh(); // Refresh the models list
       } else {
-        const error = await response.json();
+        const responseText = await response.text();
+        console.log('[FRONTEND] Error response text:', responseText);
+        
+        let error;
+        try {
+          error = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('[FRONTEND] Error JSON parse error:', parseError);
+          alert(`Server error: ${response.status} - ${responseText}`);
+          return;
+        }
+        
         alert(`Failed to auto-load model: ${error.error}`);
       }
     } catch (error) {
+      console.error('[FRONTEND] Auto-load error:', error);
       alert(`Error auto-loading model: ${error.message}`);
     } finally {
       setLoading(false);

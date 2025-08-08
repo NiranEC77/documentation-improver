@@ -181,11 +181,22 @@ def improve_document_with_llm(text, document_id):
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    try:
+        # Test LLM service connection
+        print(f"[HEALTH] Testing LLM service connection to: {LLM_SERVICE_URL}")
+        response = requests.get(f"{LLM_SERVICE_URL}/api/tags", timeout=5)
+        llm_status = "connected" if response.status_code == 200 else f"error_{response.status_code}"
+        print(f"[HEALTH] LLM service status: {llm_status}")
+    except Exception as e:
+        llm_status = f"connection_failed: {str(e)}"
+        print(f"[HEALTH] LLM service connection failed: {str(e)}")
+    
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
         'llm_service_url': LLM_SERVICE_URL,
-        'model_name': MODEL_NAME
+        'model_name': MODEL_NAME,
+        'llm_service_status': llm_status
     })
 
 @app.route('/api/documents/upload', methods=['POST'])
