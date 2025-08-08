@@ -72,7 +72,8 @@ jobs:
           rules:
             line-length: disable
             document-start: disable
-            truthy: disable" > .yamllint.yml
+            truthy: disable
+            document-end: disable" > .yamllint.yml
 
           # Run yamllint
           yamllint -c .yamllint.yml .github/workflows/ k8s/
