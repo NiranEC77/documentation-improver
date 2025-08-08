@@ -77,11 +77,17 @@ jobs:
           # Run yamllint
           yamllint -c .yamllint.yml .github/workflows/ k8s/
 
-      - name: Install kubectl
+      - name: Install kubeval for Kubernetes validation
         run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/
+          # Download and install kubeval for offline Kubernetes YAML validation
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin
 
       - name: Validate Kubernetes manifests
-        run: kubectl apply --dry-run=client --validate=false -f k8s/
+        run: |
+          # Use kubeval for offline validation (doesn't require cluster connection)
+          for file in k8s/*.yaml; do
+            echo "Validating $file..."
+            kubeval "$file"
+          done
