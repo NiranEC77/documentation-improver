@@ -21,7 +21,8 @@ spec:
         app: documentation-improver-backend
       annotations:
         argocd.argoproj.io/sync-options: Replace=true
-        timestamp: "2025-08-08T14:00:00Z"
+        timestamp: "2025-08-08T14:15:00Z"
+        force-restart: "true"
     spec:
       securityContext:
         runAsNonRoot: true
@@ -33,6 +34,7 @@ spec:
       containers:
         - name: backend
           image: ghcr.io/niranec77/documentation-improver-documentation-improver-backend:main-ddc4db2
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
           env:

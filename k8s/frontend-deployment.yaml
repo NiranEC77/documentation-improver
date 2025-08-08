@@ -30,6 +30,7 @@ spec:
       containers:
         - name: frontend
           image: ghcr.io/niranec77/documentation-improver-documentation-improver-frontend:main-ddc4db2
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           env:
