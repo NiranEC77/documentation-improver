@@ -33,7 +33,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: backend
-          image: ghcr.io/niranec77/documentation-improver-documentation-improver-backend:main-3c1ce68
+          image: ghcr.io/niranec77/documentation-improver-documentation-improver-backend:main-f40f9d2
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
