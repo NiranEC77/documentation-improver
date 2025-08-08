@@ -1,5 +1,5 @@
 # LLM deployment temporarily disabled due to resource constraints and PVC issues
-# 
+#
 # To enable LLM service:
 # 1. Ensure your cluster has sufficient resources (1Gi+ memory, 500m+ CPU)
 # 2. Verify storage class "standard" exists: kubectl get storageclass
