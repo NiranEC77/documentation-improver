@@ -21,7 +21,7 @@ spec:
         app: documentation-improver-backend
       annotations:
         argocd.argoproj.io/sync-options: Replace=true
-        timestamp: "2025-08-08T13:55:00Z"
+        timestamp: "2025-08-08T14:00:00Z"
     spec:
       securityContext:
         runAsNonRoot: true
