@@ -7,6 +7,7 @@ import DocumentUpload from './components/DocumentUpload';
 import DocumentViewer from './components/DocumentViewer';
 import ModelManager from './components/ModelManager';
 import Sidebar from './components/Sidebar';
+import ProcessingStatus from './components/ProcessingStatus';
 
 function App() {
   const [socket, setSocket] = useState(null);
@@ -14,6 +15,7 @@ function App() {
   const [currentDocument, setCurrentDocument] = useState(null);
   const [models, setModels] = useState([]);
   const [currentModel, setCurrentModel] = useState('codellama:7b');
+  const [processingDocument, setProcessingDocument] = useState(null);
 
   useEffect(() => {
     // Initialize socket connection
@@ -62,6 +64,19 @@ function App() {
             error: updateData.error || doc.error
           };
           console.log('[FRONTEND] Updated document:', updatedDoc);
+          
+          // If document is completed, automatically select it and clear processing status
+          if (updateData.status === 'completed' && updatedDoc.improved_text) {
+            console.log('[FRONTEND] Document completed, selecting it for viewing');
+            setCurrentDocument(updatedDoc);
+            setProcessingDocument(null); // Hide processing status
+          }
+          
+          // Update processing document if it's the one being processed
+          if (processingDocument && processingDocument.id === updateData.document_id) {
+            setProcessingDocument(updatedDoc);
+          }
+          
           return updatedDoc;
         }
         return doc;
@@ -73,10 +88,15 @@ function App() {
   const addDocument = (document) => {
     setDocuments(prevDocs => [document, ...prevDocs]);
     setCurrentDocument(document);
+    setProcessingDocument(document); // Show processing status
   };
 
   const selectDocument = (document) => {
     setCurrentDocument(document);
+  };
+
+  const closeProcessingStatus = () => {
+    setProcessingDocument(null);
   };
 
   return (
@@ -124,6 +144,14 @@ function App() {
             </Routes>
           </main>
         </div>
+        
+        {/* Real-time processing status */}
+        {processingDocument && (
+          <ProcessingStatus 
+            document={processingDocument}
+            onClose={closeProcessingStatus}
+          />
+        )}
       </div>
     </Router>
   );

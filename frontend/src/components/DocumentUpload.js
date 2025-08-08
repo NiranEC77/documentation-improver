@@ -93,6 +93,7 @@ const DocumentUpload = ({ onDocumentUploaded, socket, currentModel }) => {
         };
 
         console.log('[FRONTEND] Document uploaded:', document);
+        console.log('[FRONTEND] Document uploaded:', document);
         onDocumentUploaded(document);
         setUploadStatus({ 
           type: 'success', 
@@ -100,10 +101,8 @@ const DocumentUpload = ({ onDocumentUploaded, socket, currentModel }) => {
         });
         setUrlInput(''); // Clear input
 
-        // Clear status after 3 seconds
-        setTimeout(() => {
-          setUploadStatus(null);
-        }, 3000);
+        // Don't clear status - let it stay until processing is complete
+        // The WebSocket will update the status when processing is done
       } else {
         throw new Error(data.error || 'URL ingestion failed');
       }
