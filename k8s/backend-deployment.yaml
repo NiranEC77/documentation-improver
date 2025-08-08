@@ -29,7 +29,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: backend
-          image: ghcr.io/niranec77/documentation-improver-documentation-improver-backend:main-2d06be9
+          image: ghcr.io/niranec77/documentation-improver-documentation-improver-backend:main-87b4ee7
           ports:
             - containerPort: 5000
           env:
