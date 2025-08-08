@@ -104,8 +104,13 @@ Please transform this into clean, professional GCP-style documentation:"""
 def improve_document_with_llm(text, document_id):
     """Improve document using LLM service"""
     try:
+        print(f"[LLM PROCESSING] Starting LLM processing for document {document_id}")
+        print(f"[LLM PROCESSING] Using model: {MODEL_NAME}")
+        print(f"[LLM PROCESSING] Text length: {len(text)} characters")
+        
         # Create the prompt
         prompt = create_gcp_style_prompt(text)
+        print(f"[LLM PROCESSING] Prompt created, length: {len(prompt)} characters")
         
         # Prepare the request for Ollama
         payload = {
@@ -119,6 +124,8 @@ def improve_document_with_llm(text, document_id):
             }
         }
         
+        print(f"[LLM PROCESSING] Sending request to LLM service: {LLM_SERVICE_URL}")
+        
         # Update status
         document_status[document_id]['status'] = 'processing'
         document_status[document_id]['progress'] = 10
@@ -129,15 +136,20 @@ def improve_document_with_llm(text, document_id):
         })
         
         # Call LLM service
+        print(f"[LLM PROCESSING] Making request to LLM service...")
         response = requests.post(
             f"{LLM_SERVICE_URL}/api/generate",
             json=payload,
             timeout=300  # 5 minutes timeout
         )
         
+        print(f"[LLM PROCESSING] LLM service response status: {response.status_code}")
+        
         if response.status_code == 200:
             result = response.json()
             improved_text = result.get('response', '')
+            print(f"[LLM PROCESSING] LLM response received, length: {len(improved_text)} characters")
+            print(f"[LLM PROCESSING] First 200 characters of response: {improved_text[:200]}...")
             
             # Update status
             document_status[document_id]['status'] = 'completed'
@@ -253,10 +265,17 @@ def ingest_url():
         # Generate unique document ID
         document_id = str(uuid.uuid4())
         
+        print(f"[URL INGESTION] Starting ingestion for URL: {url}")
+        print(f"[URL INGESTION] Document ID: {document_id}")
+        
         # Extract text from URL
         try:
+            print(f"[URL INGESTION] Extracting content from URL...")
             original_text = extract_text_from_url(url)
+            print(f"[URL INGESTION] Content extracted successfully. Length: {len(original_text)} characters")
+            print(f"[URL INGESTION] First 200 characters: {original_text[:200]}...")
         except Exception as e:
+            print(f"[URL INGESTION] ERROR: Failed to extract content: {str(e)}")
             return jsonify({'error': f'Failed to extract content from URL: {str(e)}'}), 400
         
         # Initialize document status
