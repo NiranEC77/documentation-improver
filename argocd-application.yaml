@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: documentation-improver
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/NiranEC77/documentation-improver
+    targetRevision: main
+    path: k8s  # This is crucial - points to your k8s directory
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: doc-improver  # Target namespace from your manifests
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true  # Auto-create the namespace if it doesn't exist
