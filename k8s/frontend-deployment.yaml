@@ -29,7 +29,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: frontend
-          image: ghcr.io/niranec77/documentation-improver-documentation-improver-frontend:main-b0910ff
+          image: ghcr.io/niranec77/documentation-improver-documentation-improver-frontend:main-1276b8c
           ports:
             - containerPort: 3000
           env:
